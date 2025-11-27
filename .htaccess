@@ -3,12 +3,12 @@
 
 # Enable mod_rewrite
 RewriteEngine On
-RewriteBase /bisnis/
+RewriteBase /
 
 # Jika tidak ada file/folder physical, redirect ke index
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ pages/dashboard.php [L]
+RewriteRule ^(.*)$ index.php [L]
 
 # Security headers
 <IfModule mod_headers.c>
