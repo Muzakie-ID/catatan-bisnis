@@ -1,19 +1,8 @@
 # .htaccess - Apache Configuration
-# Uncomment jika menggunakan Apache
+# DISABLED - Direct file access only
 
 # Enable mod_rewrite
-RewriteEngine On
-RewriteBase /
-
-# Jika tidak ada file/folder physical, redirect ke index
-# EXCLUDE: /pages/, /backend/, /assets/, /database/
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteCond %{REQUEST_URI} !^/pages/
-RewriteCond %{REQUEST_URI} !^/backend/
-RewriteCond %{REQUEST_URI} !^/assets/
-RewriteCond %{REQUEST_URI} !^/database/
-RewriteRule ^(.*)$ index.php [L]
+RewriteEngine Off
 
 # Security headers
 <IfModule mod_headers.c>
