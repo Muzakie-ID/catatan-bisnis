@@ -1,0 +1,137 @@
+# 🚀 DOCKER QUICK REFERENCE
+
+## ⚡ QUICK DEPLOY (Copy-Paste)
+
+```bash
+# 1. SSH ke VPS
+ssh user@vps_ip
+
+# 2. Clone/upload repository
+git clone <repo_url> bisnis
+cd bisnis
+
+# 3. Copy nginx config
+cp nginx.conf.example nginx.conf
+# Edit nginx.conf sesuai kebutuhan
+
+# 4. Make script executable
+chmod +x docker-deploy.sh
+
+# 5. Run deployment
+./docker-deploy.sh
+```
+
+## 🐳 BASIC DOCKER COMMANDS
+
+| Command | Fungsi |
+|---------|--------|
+| `docker-compose up -d` | Start containers background |
+| `docker-compose down` | Stop & remove containers |
+| `docker-compose ps` | List containers |
+| `docker-compose logs -f` | View logs (realtime) |
+| `docker-compose restart` | Restart containers |
+| `docker-compose exec app bash` | SSH ke container PHP |
+| `docker-compose exec nginx bash` | SSH ke container Nginx |
+
+## 📝 CONFIG UPDATE
+
+Update `backend/config.php`:
+```php
+define('DB_HOST', 'mysql');  // Nama service MySQL
+define('DB_USER', 'stok_hp');
+define('DB_PASS', 'password_mysql');
+```
+
+## 🔌 NETWORK CHECK
+
+```bash
+# List networks
+docker network ls
+
+# Inspect network
+docker network inspect mysql_db
+
+# Ping MySQL dari app
+docker exec stok_hp_app ping mysql
+```
+
+## 📊 MONITORING
+
+```bash
+# Real-time logs
+docker-compose logs -f app
+docker-compose logs -f nginx
+
+# Disk usage
+docker system df
+
+# Container stats
+docker stats stok_hp_app stok_hp_nginx
+```
+
+## 🔒 SECURITY
+
+- [ ] Update DB password di config.php
+- [ ] Copy nginx.conf.example ke nginx.conf
+- [ ] Update nginx.conf dengan domain/SSL
+- [ ] Set firewall: `sudo ufw allow 8092`
+- [ ] Enable HTTPS di production
+
+## 🆘 COMMON ISSUES
+
+| Issue | Fix |
+|-------|-----|
+| Connection refused | Check network: `docker network inspect mysql_db` |
+| DB connection error | Verify credentials di config.php |
+| 502 Bad Gateway | Restart app: `docker-compose restart app` |
+| Permission denied | `docker exec stok_hp_app chown -R www-data:www-data /var/www/html` |
+| Nginx syntax error | Check nginx.conf: `docker exec stok_hp_nginx nginx -t` |
+
+## 📞 LOGS & DEBUG
+
+```bash
+# App logs
+docker-compose logs app
+
+# Nginx logs
+docker-compose logs nginx
+
+# Export logs
+docker-compose logs > logs.txt
+
+# Follow specific container
+docker-compose logs -f --tail=100 app
+```
+
+## 🔄 UPDATE APPLICATION
+
+```bash
+cd bisnis
+git pull origin main
+docker-compose build --no-cache
+docker-compose up -d
+docker-compose logs -f
+```
+
+## 💾 BACKUP DATABASE
+
+```bash
+# Backup
+docker exec stok_hp_app mysqldump -h mysql -u stok_hp -p'password' stok_hp > backup.sql
+
+# Restore
+docker exec -i stok_hp_app mysql -h mysql -u stok_hp -p'password' stok_hp < backup.sql
+```
+
+## 📍 IMPORTANT NOTES
+
+1. **Network Name**: Gunakan `mysql_db` (sudah ada di config)
+2. **Port**: 8092 (dapat diubah di docker-compose.yaml)
+3. **Nginx Config**: Buat sendiri, gunakan nginx.conf.example sebagai template
+4. **Database**: Auto-import dari database/database.sql saat pertama kali
+5. **Permissions**: Auto-set di docker-deploy.sh
+
+---
+
+**Akses Web**: `http://vps_ip:8092`  
+**Support**: Lihat DOCKER_DEPLOY.md untuk detail lengkap

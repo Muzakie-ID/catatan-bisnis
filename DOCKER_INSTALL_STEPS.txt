@@ -1,0 +1,572 @@
+# 📖 STEP-BY-STEP DOCKER SETUP UNTUK VPS UBUNTU
+
+## 🎯 OVERVIEW
+
+1. **Install Docker & Docker Compose** di VPS
+2. **Create network `mysql_db`** (koneksi ke MySQL container lain)
+3. **Configure application** (config.php + nginx.conf)
+4. **Deploy container** (app + nginx)
+5. **Initialize database** dan test akses
+
+---
+
+## STEP 1: SSH KE VPS
+
+```bash
+ssh user@your_vps_ip
+# atau
+ssh user@your_vps_domain.com
+
+# Masuk sebagai root jika perlu
+sudo su -
+```
+
+---
+
+## STEP 2: INSTALL DOCKER
+
+### Install Docker Engine
+
+```bash
+# Update package list
+sudo apt update
+
+# Install dependencies
+sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+
+# Add Docker GPG key
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+
+# Add Docker repository
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+
+# Update dan install Docker
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io
+
+# Verify installation
+docker --version
+```
+
+### Setup Docker Permissions
+
+```bash
+# Add user ke docker group (opsional, untuk jalan tanpa sudo)
+sudo usermod -aG docker $USER
+
+# Restart session / relogin
+exec su - $USER
+
+# Verify
+docker ps
+```
+
+### Install Docker Compose
+
+```bash
+# Download latest release
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+# Make executable
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Verify
+docker-compose --version
+```
+
+---
+
+## STEP 3: SETUP NETWORK
+
+Jaringan `mysql_db` harus ada agar app bisa connect ke MySQL container lain.
+
+```bash
+# List network yang sudah ada
+docker network ls
+
+# Create network (jika belum ada)
+docker network create mysql_db
+
+# Verify
+docker network inspect mysql_db
+```
+
+**OUTPUT YANG BENAR:**
+```json
+[
+  {
+    "Name": "mysql_db",
+    "Scope": "local",
+    "Driver": "bridge",
+    ...
+  }
+]
+```
+
+---
+
+## STEP 4: UPLOAD APPLICATION KE VPS
+
+### Option A: Menggunakan Git
+
+```bash
+cd /home/user
+git clone https://github.com/anda/bisnis.git
+cd bisnis
+```
+
+### Option B: Menggunakan SCP (dari local)
+
+```bash
+scp -r ~/bisnis user@vps_ip:/home/user/
+```
+
+### Option C: Menggunakan SFTP (Manual upload)
+
+```
+Server: vps_ip
+User: user
+Password: ***
+Remote path: /home/user/bisnis
+```
+
+---
+
+## STEP 5: CONFIGURE APPLICATION
+
+### A. Update Backend Config
+
+Edit `backend/config.php`:
+
+```bash
+nano backend/config.php
+```
+
+Update dengan kredensial MySQL yang benar:
+
+```php
+define('DB_HOST', 'mysql');              // PENTING: gunakan nama service MySQL
+define('DB_USER', 'stok_hp');            // Sesuaikan dengan MySQL container
+define('DB_PASS', 'password_mysql_anda'); // GANTI dengan password real
+define('DB_NAME', 'stok_hp');
+define('DB_PORT', 3306);
+```
+
+**PENTING:**
+- `DB_HOST` harus nama service MySQL di docker-compose container lain
+- `DB_PASS` harus sesuai dengan password MySQL container
+- Jika MySQL ada di container terpisah, tanyakan nama service-nya
+
+Simpan dengan: `Ctrl+X` → `Y` → `Enter`
+
+### B. Setup Nginx Config
+
+Copy template nginx config:
+
+```bash
+cp nginx.conf.example nginx.conf
+```
+
+Edit nginx.conf sesuai kebutuhan (opsional):
+
+```bash
+nano nginx.conf
+```
+
+Default sudah OK untuk basic setup. Untuk customization lebih lanjut:
+- Update server_name jika pakai domain
+- Tambah SSL config jika pakai HTTPS
+- Adjust client_max_body_size untuk upload
+
+Simpan dengan: `Ctrl+X` → `Y` → `Enter`
+
+### C. Check File Structure
+
+```bash
+ls -la
+
+# Output should show:
+# ✅ Dockerfile
+# ✅ docker-compose.yaml
+# ✅ nginx.conf
+# ✅ nginx.conf.example
+# ✅ backend/
+# ✅ pages/
+# ✅ database/
+# ... (other files)
+```
+
+---
+
+## STEP 6: BUILD & RUN DOCKER
+
+### Option A: Using Script (Recommended)
+
+```bash
+# Make script executable
+chmod +x docker-deploy.sh
+
+# Run deployment script
+./docker-deploy.sh
+
+# Output akan menampilkan status & access URL
+```
+
+### Option B: Manual Command
+
+```bash
+# Build images
+docker-compose build
+
+# Start containers
+docker-compose up -d
+
+# Check status
+docker-compose ps
+
+# View logs
+docker-compose logs -f
+```
+
+**Wait for services to start (~5-10 seconds)**
+
+---
+
+## STEP 7: INITIALIZE DATABASE
+
+```bash
+# Import database schema
+docker exec -i stok_hp_app mysql -h mysql -u stok_hp -p'password_mysql_anda' stok_hp < database/database.sql
+
+# Verify database created
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'password_mysql_anda' -e "SHOW DATABASES;"
+
+# Check tables
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'password_mysql_anda' stok_hp -e "SHOW TABLES;"
+```
+
+**Output yang benar:**
+```
++---------------------+
+| Database            |
++---------------------+
+| information_schema  |
+| stok_hp             | ✅
++---------------------+
+
++------------------+
+| Tables_in_stok_hp|
++------------------+
+| sessions         |
+| stok             |
+| transaksi        |
+| users            |
++------------------+
+```
+
+---
+
+## STEP 8: FIX PERMISSIONS
+
+```bash
+# Set proper permissions
+docker exec stok_hp_app chown -R www-data:www-data /var/www/html
+docker exec stok_hp_app chmod -R 755 /var/www/html
+```
+
+---
+
+## STEP 9: VERIFY CONTAINERS
+
+```bash
+# Check container status
+docker-compose ps
+
+# Output harus menampilkan:
+# CONTAINER ID  IMAGE      COMMAND           STATUS
+# xxx           app:latest "docker-php..."   Up 2 minutes
+# yyy           nginx:alpine "nginx -g..."   Up 2 minutes
+```
+
+**Status harus UP!** Jika tidak:
+```bash
+docker-compose logs
+# lihat error message
+```
+
+---
+
+## STEP 10: OPEN FIREWALL
+
+```bash
+# Check firewall status
+sudo ufw status
+
+# Allow port 8092
+sudo ufw allow 8092
+
+# Allow SSH jika perlu
+sudo ufw allow 22
+
+# Allow HTTP (untuk redirect ke HTTPS nanti)
+sudo ufw allow 80
+
+# Enable firewall (jika belum)
+sudo ufw enable
+
+# Verify
+sudo ufw status
+```
+
+**Output yang benar:**
+```
+Status: active
+
+To                         Action      From
+--                         ------      ----
+22/tcp                     ALLOW       Anywhere
+80/tcp                     ALLOW       Anywhere
+8092/tcp                   ALLOW       Anywhere
+```
+
+---
+
+## STEP 11: TEST AKSES
+
+### Via Browser
+
+Buka browser dan akses:
+
+```
+http://your_vps_ip:8092
+http://your_vps_domain.com:8092 (jika pakai domain)
+```
+
+**Halaman yang muncul:**
+- ✅ Login page = BERHASIL
+- ❌ Connection refused = Check firewall
+- ❌ 502 Bad Gateway = Check container logs
+- ❌ Database error = Check config.php
+
+### Via Command Line
+
+```bash
+# Test connection
+curl http://localhost:8092
+
+# Test PHP-FPM connection
+docker exec stok_hp_app curl localhost:8092
+
+# Test MySQL connection
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'password' -e "SELECT 1"
+```
+
+---
+
+## STEP 12: TEST APLIKASI
+
+1. **Register akun baru**
+   - Buka: `http://vps_ip:8092/pages/register.php`
+   - Isi form lengkap
+   - Klik "Daftar"
+
+2. **Login**
+   - Username/Email + Password
+   - Klik "Masuk"
+
+3. **Check Dashboard**
+   - Lihat stats
+   - Coba add stok
+   - Coba input transaksi
+
+Jika semua berjalan = **DEPLOYMENT SUKSES! 🎉**
+
+---
+
+## 📋 VERIFICATION CHECKLIST
+
+Sebelum declare "production-ready":
+
+- [ ] Container berjalan: `docker-compose ps`
+- [ ] Database terconnect: `docker exec stok_hp_app mysql -h mysql ... -e "SELECT 1"`
+- [ ] Web accessible: `http://vps_ip:8092`
+- [ ] Bisa register akun
+- [ ] Bisa login
+- [ ] Bisa akses dashboard
+- [ ] Session berjalan
+- [ ] Firewall allow port 8092
+- [ ] File permissions OK
+- [ ] nginx.conf syntax OK: `docker exec stok_hp_nginx nginx -t`
+
+---
+
+## 🆘 TROUBLESHOOTING COMMON ISSUES
+
+### Issue 1: Container tidak start
+
+```bash
+# Check logs
+docker-compose logs
+
+# Rebuild
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+### Issue 2: Connection refused
+
+```bash
+# Check port
+ss -tlnp | grep 8092
+
+# Check firewall
+sudo ufw status
+sudo ufw allow 8092
+```
+
+### Issue 3: Database not found
+
+```bash
+# Manually import
+docker exec -i stok_hp_app mysql -h mysql -u stok_hp -p'pass' stok_hp < database/database.sql
+
+# Verify
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'pass' -e "SHOW DATABASES;"
+```
+
+### Issue 4: Permission denied
+
+```bash
+# Fix ownership
+docker exec stok_hp_app chown -R www-data:www-data /var/www/html
+
+# Fix permissions
+docker exec stok_hp_app chmod -R 755 /var/www/html
+```
+
+### Issue 5: Nginx syntax error
+
+```bash
+# Test nginx config
+docker exec stok_hp_nginx nginx -t
+
+# View config
+docker exec stok_hp_nginx cat /etc/nginx/conf.d/default.conf
+
+# Reload nginx
+docker exec stok_hp_nginx nginx -s reload
+```
+
+---
+
+## 📊 MONITORING COMMANDS
+
+```bash
+# Real-time logs
+docker-compose logs -f
+
+# CPU/Memory usage
+docker stats stok_hp_app stok_hp_nginx
+
+# Disk usage
+docker system df
+
+# Network inspect
+docker network inspect mysql_db
+
+# Container inspect
+docker inspect stok_hp_app
+```
+
+---
+
+## 🔄 MAINTENANCE
+
+### Regular Backup
+
+```bash
+# Backup database (weekly)
+docker exec stok_hp_app mysqldump -h mysql -u stok_hp -p'pass' stok_hp > backup_$(date +%Y%m%d).sql
+
+# Backup files
+tar -czf bisnis_backup_$(date +%Y%m%d).tar.gz ./bisnis
+```
+
+### Update Application
+
+```bash
+cd /path/to/bisnis
+git pull origin main
+docker-compose restart
+```
+
+### Clean Up
+
+```bash
+# Remove unused images
+docker image prune -a
+
+# Remove unused volumes
+docker volume prune
+
+# Full cleanup
+docker system prune -a
+```
+
+---
+
+## ✅ DEPLOYMENT COMPLETE!
+
+Jika semua langkah berhasil:
+
+```
+✅ Docker installed & running
+✅ Network mysql_db created
+✅ App container running
+✅ Nginx container running
+✅ Database connected
+✅ Port 8092 open
+✅ Application accessible
+✅ Login/Register working
+✅ Dashboard showing stats
+```
+
+**Akses:** `http://your_vps_ip:8092`  
+**Maintenance:** `docker-compose logs -f`  
+**Stop:** `docker-compose down`  
+**Start:** `docker-compose up -d`
+
+---
+
+## 📞 USEFUL COMMANDS REFERENCE
+
+```bash
+# Container management
+docker-compose ps              # Status
+docker-compose logs -f         # Logs
+docker-compose restart         # Restart
+docker-compose down            # Stop & remove
+
+# Execute commands
+docker exec stok_hp_app bash   # SSH ke PHP
+docker exec stok_hp_nginx bash # SSH ke Nginx
+
+# Database
+docker exec stok_hp_app mysql -h mysql -u user -p db -e "QUERY"
+
+# Backup/Restore
+docker exec stok_hp_app mysqldump -h mysql -u user -p db > backup.sql
+docker exec -i stok_hp_app mysql -h mysql -u user -p db < backup.sql
+
+# Updates
+git pull origin main
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+---
+
+**Happy Deployment! 🚀**
+
+Untuk pertanyaan lebih lanjut, cek DOCKER_DEPLOY.md atau DOCKER_QUICK_REFERENCE.txt

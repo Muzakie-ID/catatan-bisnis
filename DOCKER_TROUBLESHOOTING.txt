@@ -1,0 +1,603 @@
+# 🔧 DOCKER TROUBLESHOOTING GUIDE
+
+## 🆘 COMMON ERRORS & SOLUTIONS
+
+---
+
+## ❌ ERROR 1: "Cannot connect to Docker daemon"
+
+### Gejala:
+```
+Cannot connect to Docker daemon at unix:///var/run/docker.sock. 
+Is the docker daemon running?
+```
+
+### Solusi:
+
+```bash
+# Start Docker daemon
+sudo systemctl start docker
+
+# Check status
+sudo systemctl status docker
+
+# Enable auto-start
+sudo systemctl enable docker
+
+# Verify
+docker ps
+```
+
+### Jika masih error:
+
+```bash
+# Check if docker running
+ps aux | grep docker
+
+# Restart docker
+sudo systemctl restart docker
+
+# Check logs
+journalctl -u docker -n 50
+```
+
+---
+
+## ❌ ERROR 2: "network mysql_db not found"
+
+### Gejala:
+```
+ERROR: Network mysql_db declared as external, 
+but could not be found.
+```
+
+### Solusi:
+
+```bash
+# Create network
+docker network create mysql_db
+
+# Verify
+docker network ls | grep mysql_db
+
+# Inspect
+docker network inspect mysql_db
+```
+
+### Jika MySQL di container lain:
+
+```bash
+# Cek apakah MySQL container connect ke network
+docker inspect mysql_container_name
+
+# Tambah container ke network (jika perlu)
+docker network connect mysql_db mysql_container_name
+
+# Verify connection
+docker network inspect mysql_db
+```
+
+---
+
+## ❌ ERROR 3: "Connection refused" (Port 8092)
+
+### Gejala:
+```
+curl: (7) Failed to connect to 127.0.0.1 port 8092
+```
+
+### Solusi:
+
+```bash
+# Check port listening
+ss -tlnp | grep 8092
+
+# Check firewall
+sudo ufw status
+sudo ufw allow 8092
+
+# Test connection dari container
+docker exec stok_hp_nginx curl localhost:80
+
+# Restart nginx
+docker-compose restart nginx
+```
+
+### Debug lebih lanjut:
+
+```bash
+# Check nginx running
+docker exec stok_hp_nginx ps aux | grep nginx
+
+# Check nginx config syntax
+docker exec stok_hp_nginx nginx -t
+
+# View nginx error log
+docker exec stok_hp_nginx cat /var/log/nginx/error.log
+
+# Check app container
+docker exec stok_hp_app ps aux | grep php-fpm
+```
+
+---
+
+## ❌ ERROR 4: "502 Bad Gateway"
+
+### Gejala:
+```
+502 Bad Gateway
+```
+
+### Penyebab:
+- PHP-FPM tidak running
+- Nginx tidak bisa connect ke PHP-FPM
+- Wrong upstream configuration
+
+### Solusi:
+
+```bash
+# Check PHP-FPM status
+docker exec stok_hp_app ps aux | grep php-fpm
+
+# If not running, restart
+docker-compose restart app
+
+# Check PHP-FPM logs
+docker exec stok_hp_app tail -f /var/log/php-fpm.log
+
+# Check nginx upstream
+docker exec stok_hp_nginx cat /etc/nginx/conf.d/default.conf | grep upstream
+
+# Test connection
+docker exec stok_hp_nginx curl app:9000
+```
+
+### Complete restart:
+
+```bash
+docker-compose down
+docker-compose up -d
+sleep 5
+docker-compose logs
+```
+
+---
+
+## ❌ ERROR 5: "database connection failed"
+
+### Gejala:
+```
+Koneksi database gagal: 
+Host 'mysql' is not allowed to connect to this MySQL server
+```
+
+### Solusi:
+
+```bash
+# Test MySQL connection
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'password' -e "SELECT 1"
+
+# If error, check credentials
+docker exec stok_hp_app mysql -h mysql -u root -p'password' -e "SELECT 1"
+
+# Check MySQL user privileges
+docker exec mysql_container_name mysql -u root -p'password' -e "SHOW GRANTS FOR 'stok_hp'@'%';"
+
+# Fix privileges if needed
+docker exec mysql_container_name mysql -u root -p'password' -e "GRANT ALL ON stok_hp.* TO 'stok_hp'@'%';"
+
+# Check MySQL network
+docker network inspect mysql_db | grep stok_hp_app
+```
+
+### Verify config.php:
+
+```bash
+# Check current config
+docker exec stok_hp_app cat backend/config.php | grep DB_
+
+# Update if wrong
+docker exec stok_hp_app nano backend/config.php
+```
+
+---
+
+## ❌ ERROR 6: "File not found" (404)
+
+### Gejala:
+```
+404 Not Found
+The requested URL was not found on this server
+```
+
+### Penyebab:
+- File tidak ter-sync dari host ke container
+- Path salah di nginx.conf
+- Volume mounting error
+
+### Solusi:
+
+```bash
+# Check volume mount
+docker inspect stok_hp_app | grep -A 5 "Mounts"
+
+# Check file exist di container
+docker exec stok_hp_app ls -la /var/www/html/pages/
+
+# Check nginx root path
+docker exec stok_hp_nginx cat /etc/nginx/conf.d/default.conf | grep root
+
+# Verify file permissions
+docker exec stok_hp_app ls -la /var/www/html/
+
+# Fix permissions if needed
+docker exec stok_hp_app chown -R www-data:www-data /var/www/html
+docker exec stok_hp_app chmod -R 755 /var/www/html
+```
+
+### Update volume:
+
+```bash
+# Edit docker-compose.yaml
+nano docker-compose.yaml
+
+# Make sure volumes section:
+# volumes:
+#   - ./:/var/www/html
+
+# Recreate container
+docker-compose down
+docker-compose up -d
+```
+
+---
+
+## ❌ ERROR 7: "Permission denied"
+
+### Gejala:
+```
+Permission denied reading /var/www/html/...
+```
+
+### Solusi:
+
+```bash
+# Fix ownership
+docker exec stok_hp_app chown -R www-data:www-data /var/www/html
+
+# Fix permissions
+docker exec stok_hp_app chmod -R 755 /var/www/html
+
+# Specific file permissions
+docker exec stok_hp_app chmod 644 /var/www/html/backend/config.php
+
+# Verify
+docker exec stok_hp_app ls -la /var/www/html/backend/config.php
+```
+
+---
+
+## ❌ ERROR 8: "Nginx config syntax error"
+
+### Gejala:
+```
+[emerg] directive "..." invalid in /etc/nginx/conf.d/default.conf
+```
+
+### Solusi:
+
+```bash
+# Test nginx config
+docker exec stok_hp_nginx nginx -t
+
+# Output detailed error
+docker exec stok_hp_nginx nginx -t -c /etc/nginx/nginx.conf
+
+# View config
+docker exec stok_hp_nginx cat /etc/nginx/conf.d/default.conf
+
+# Check logs
+docker exec stok_hp_nginx tail -f /var/log/nginx/error.log
+```
+
+### Fix config:
+
+```bash
+# Edit from host
+nano nginx.conf
+
+# Validate locally
+# Check syntax, save, then:
+docker-compose restart nginx
+
+# Verify
+docker exec stok_hp_nginx nginx -t
+```
+
+---
+
+## ❌ ERROR 9: "Container exits immediately"
+
+### Gejala:
+```
+docker ps shows container not running
+```
+
+### Solusi:
+
+```bash
+# Check logs
+docker-compose logs app
+docker-compose logs nginx
+
+# Check exit code
+docker inspect stok_hp_app | grep ExitCode
+
+# Try to start manually
+docker exec stok_hp_app bash -c "echo 'test'"
+
+# Rebuild container
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+```
+
+---
+
+## ❌ ERROR 10: "Session storage permission denied"
+
+### Gejala:
+```
+PHP Warning: session_start(): open(.../.../sess_...) failed
+```
+
+### Solusi:
+
+```bash
+# Fix session directory
+docker exec stok_hp_app mkdir -p /var/lib/php/sessions
+docker exec stok_hp_app chown -R www-data:www-data /var/lib/php/sessions
+docker exec stok_hp_app chmod -R 1777 /var/lib/php/sessions
+
+# Or use tmp
+export SESSION_SAVE_PATH=/tmp
+docker exec stok_hp_app chmod 1777 /tmp
+```
+
+---
+
+## 🔍 DIAGNOSTIC COMMANDS
+
+### Check all containers
+
+```bash
+docker-compose ps -a
+
+# Output:
+# NAME              STATUS      PORTS
+# stok_hp_app       Up          9000
+# stok_hp_nginx     Up          0.0.0.0:8092->80/tcp
+```
+
+### View logs
+
+```bash
+# All services
+docker-compose logs
+
+# Specific service
+docker-compose logs app
+docker-compose logs nginx
+
+# Follow logs (realtime)
+docker-compose logs -f
+
+# Last N lines
+docker-compose logs --tail=50 app
+
+# Timestamps
+docker-compose logs --timestamps app
+```
+
+### Check resource usage
+
+```bash
+# CPU & Memory
+docker stats stok_hp_app stok_hp_nginx
+
+# Disk usage
+docker system df
+
+# Detailed
+docker system df -v
+```
+
+### Network diagnostics
+
+```bash
+# List networks
+docker network ls
+
+# Inspect network
+docker network inspect mysql_db
+
+# Test connection
+docker exec stok_hp_app ping mysql
+docker exec stok_hp_app curl http://mysql:3306
+
+# Check DNS
+docker exec stok_hp_app nslookup mysql
+```
+
+### Database diagnostics
+
+```bash
+# List databases
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'pass' -e "SHOW DATABASES;"
+
+# Check tables
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'pass' stok_hp -e "SHOW TABLES;"
+
+# Check users table
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'pass' stok_hp -e "SELECT COUNT(*) FROM users;"
+
+# MySQL version
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'pass' -e "SELECT VERSION();"
+```
+
+---
+
+## 🛠️ REPAIR PROCEDURES
+
+### Full Rebuild
+
+```bash
+# Stop everything
+docker-compose down
+
+# Remove images (optional)
+docker rmi stok_hp_app nginx:alpine
+
+# Remove volumes (CAREFUL - will delete data!)
+docker volume prune -a
+
+# Rebuild
+docker-compose build --no-cache
+
+# Start
+docker-compose up -d
+
+# Initialize
+docker exec -i stok_hp_app mysql -h mysql -u stok_hp -p'pass' stok_hp < database/database.sql
+```
+
+### Restart Services
+
+```bash
+# Restart all
+docker-compose restart
+
+# Restart specific
+docker-compose restart app
+docker-compose restart nginx
+
+# Hard restart
+docker-compose stop
+docker-compose start
+```
+
+### Reset Permissions
+
+```bash
+# Files
+docker exec stok_hp_app chown -R www-data:www-data /var/www/html
+docker exec stok_hp_app chmod -R 755 /var/www/html
+
+# Sessions
+docker exec stok_hp_app chmod 1777 /tmp
+docker exec stok_hp_app chmod 1777 /var/lib/php/sessions 2>/dev/null || true
+
+# Backend
+docker exec stok_hp_app chmod 644 /var/www/html/backend/config.php
+```
+
+---
+
+## 📋 DEBUG CHECKLIST
+
+Ketika ada masalah, check ini secara urut:
+
+```bash
+# 1. Container running?
+docker-compose ps
+
+# 2. Network exists?
+docker network ls | grep mysql_db
+
+# 3. Port listening?
+ss -tlnp | grep 8092
+
+# 4. PHP-FPM running?
+docker exec stok_hp_app ps aux | grep php-fpm
+
+# 5. Nginx running?
+docker exec stok_hp_nginx ps aux | grep nginx
+
+# 6. Database connected?
+docker exec stok_hp_app mysql -h mysql -u stok_hp -p'pass' -e "SELECT 1"
+
+# 7. Files accessible?
+docker exec stok_hp_app test -f /var/www/html/index.php && echo "OK" || echo "MISSING"
+
+# 8. Config correct?
+docker exec stok_hp_app grep DB_HOST backend/config.php
+
+# 9. Logs clean?
+docker-compose logs | grep ERROR
+
+# 10. Firewall open?
+sudo ufw status | grep 8092
+```
+
+---
+
+## 💡 BEST PRACTICES
+
+1. **Always backup database before major changes**
+   ```bash
+   docker exec stok_hp_app mysqldump -h mysql -u user -p db > backup.sql
+   ```
+
+2. **Use docker-compose restart, not docker stop/start**
+   ```bash
+   docker-compose restart  # Good
+   docker stop && docker start  # Bad
+   ```
+
+3. **Check logs first, always**
+   ```bash
+   docker-compose logs -f  # Start here
+   ```
+
+4. **Never delete volumes in production**
+   ```bash
+   docker volume prune -a  # DANGEROUS
+   ```
+
+5. **Test after every change**
+   ```bash
+   curl http://localhost:8092
+   docker exec stok_hp_app mysql -h mysql ... -e "SELECT 1"
+   ```
+
+---
+
+## 📞 STILL HAVING ISSUES?
+
+### Capture diagnostics
+
+```bash
+# Save full logs
+docker-compose logs > full_logs.txt
+
+# Save container info
+docker inspect stok_hp_app > container_info.json
+docker inspect stok_hp_nginx > nginx_info.json
+
+# Save network info
+docker network inspect mysql_db > network_info.json
+
+# Save system info
+docker system info > system_info.txt
+```
+
+### Get help
+
+1. Check DOCKER_INSTALL_STEPS.txt
+2. Check DOCKER_DEPLOY.md
+3. Check DOCKER_QUICK_REFERENCE.txt
+4. Provide logs & error messages
+
+---
+
+**Good luck! 🚀**

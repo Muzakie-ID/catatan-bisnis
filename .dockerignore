@@ -1,0 +1,58 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# PHP
+vendor/
+composer.lock
+.phpunit.result.cache
+
+# Temporary files
+*.tmp
+*.log
+*.pid
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Docker
+Dockerfile
+docker-compose.yaml
+.dockerignore
+
+# Documentation
+*.md
+README.md
+INSTALL.md
+QUICK_START.md
+FITUR.md
+DOCKER_DEPLOY.md
+PROJECT_SUMMARY.md
+
+# Development
+.env.local
+.env.*.local
+*.sql.backup
+nginx.conf
+
+# Build artifacts
+.cache
+dist/
+build/
