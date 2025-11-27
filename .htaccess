@@ -6,8 +6,13 @@ RewriteEngine On
 RewriteBase /
 
 # Jika tidak ada file/folder physical, redirect ke index
+# EXCLUDE: /pages/, /backend/, /assets/, /database/
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/pages/
+RewriteCond %{REQUEST_URI} !^/backend/
+RewriteCond %{REQUEST_URI} !^/assets/
+RewriteCond %{REQUEST_URI} !^/database/
 RewriteRule ^(.*)$ index.php [L]
 
 # Security headers

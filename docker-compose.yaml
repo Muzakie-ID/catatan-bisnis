@@ -16,6 +16,6 @@ services:
 
 networks:
   mysql_db:
-    driver: bridge
+    external: true
   www_app-network:
-    driver: bridge
+    external: true
