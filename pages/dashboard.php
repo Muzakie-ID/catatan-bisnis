@@ -3,8 +3,8 @@
  * pages/dashboard.php
  * Halaman dashboard ringkas
  */
-require_once '../backend/config.php';
-require_once '../backend/session.php';
+require_once __DIR__ . '/../backend/config.php';
+require_once __DIR__ . '/../backend/session.php';
 
 require_login(); // Cek session, redirect ke login jika tidak ada
 

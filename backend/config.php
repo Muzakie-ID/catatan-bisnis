@@ -5,9 +5,9 @@
  */
 
 // Database Configuration
-define('DB_HOST', 'localhost');
+define('DB_HOST', 'mysql_db');
 define('DB_USER', 'root');
-define('DB_PASS', '');  // Sesuaikan dengan password MySQL Anda
+define('DB_PASS', 'root');  // Sesuaikan dengan password MySQL Anda
 define('DB_NAME', 'stok_hp');
 define('DB_PORT', 3306);
 

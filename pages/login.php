@@ -3,8 +3,8 @@
  * pages/login.php
  * Halaman login
  */
-require_once '../backend/config.php';
-require_once '../backend/session.php';
+require_once __DIR__ . '/../backend/config.php';
+require_once __DIR__ . '/../backend/session.php';
 
 require_logout(); // Jika sudah login, arahkan ke dashboard
 ?>
