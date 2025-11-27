@@ -79,12 +79,13 @@ function require_login() {
 }
 
 /**
- * Check jika sudah login (tidak ada redirect)
+ * Redirect jika sudah login
  */
 function require_logout() {
-    // Fungsi ini hanya cek, tidak redirect
-    // Redirect logic ada di index.php
-    return !check_session();
+    if (check_session()) {
+        header('Location: /');
+        exit();
+    }
 }
 
 // Cek session pada setiap load halaman

@@ -1,16 +1,15 @@
 <?php
 /**
  * index.php
- * Router utama
+ * Router utama - hanya untuk root path
  */
-require_once 'backend/config.php';
-require_once 'backend/session.php';
+require_once __DIR__ . '/backend/config.php';
+require_once __DIR__ . '/backend/session.php';
 
 if (check_session()) {
-    // Sudah login, buka dashboard
-    require_once 'pages/dashboard.php';
+    header('Location: /pages/dashboard.php');
 } else {
-    // Belum login, buka login page
-    require_once 'pages/login.php';
+    header('Location: /pages/login.php');
 }
+exit();
 ?>
