@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     postgresql-client \
-    mysql-client \
+    mariadb-client-compat \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
