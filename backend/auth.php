@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     if (!empty($errors)) {
         $_SESSION['errors'] = $errors;
-        header('Location: ../pages/register.php');
+        header('Location: /pages/register.php');
         exit();
     }
     
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     if ($result->num_rows > 0) {
         $_SESSION['errors'] = ['Username atau email sudah terdaftar'];
-        header('Location: ../pages/register.php');
+        header('Location: /pages/register.php');
         exit();
     }
     
@@ -72,11 +72,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     if ($stmt->execute()) {
         $_SESSION['success'] = 'Akun berhasil dibuat! Silakan login.';
-        header('Location: ../pages/login.php');
+        header('Location: /pages/login.php');
         exit();
     } else {
         $_SESSION['errors'] = ['Gagal membuat akun. Coba lagi.'];
-        header('Location: ../pages/register.php');
+        header('Location: /pages/register.php');
         exit();
     }
 }
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     
     if (empty($username) || empty($password)) {
         $_SESSION['errors'] = ['Username dan password harus diisi'];
-        header('Location: ../pages/login.php');
+        header('Location: /pages/login.php');
         exit();
     }
     
@@ -105,21 +105,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if (password_verify($password, $user['password'])) {
             set_session($user['id'], $user['username']);
             $_SESSION['success'] = 'Login berhasil!';
-            header('Location: ../pages/dashboard.php');
+            header('Location: /pages/dashboard.php');
             exit();
         }
     }
     
     // Login gagal
     $_SESSION['errors'] = ['Username/email atau password salah'];
-    header('Location: ../pages/login.php');
+    header('Location: /pages/login.php');
     exit();
 }
 
 // LOGOUT
 if (isset($_GET['action']) && $_GET['action'] === 'logout') {
     destroy_session();
-    header('Location: ../pages/login.php');
+    header('Location: /pages/login.php');
     exit();
 }
 ?>

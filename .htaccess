@@ -1,22 +1,3 @@
-# .htaccess - Apache Configuration
-# DISABLED - Direct file access only
+# .htaccess DISABLED
+# Rewrite rules disabled - using direct file access
 
-# Enable mod_rewrite
-RewriteEngine Off
-
-# Security headers
-<IfModule mod_headers.c>
-    Header set X-Content-Type-Options "nosniff"
-    Header set X-Frame-Options "SAMEORIGIN"
-    Header set X-XSS-Protection "1; mode=block"
-</IfModule>
-
-# Disable directory listing
-<IfModule mod_autoindex.c>
-    Options -Indexes
-</IfModule>
-
-# Compression
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript
-</IfModule>
