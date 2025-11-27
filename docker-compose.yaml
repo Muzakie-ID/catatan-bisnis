@@ -10,9 +10,12 @@ services:
       - ./:/var/www/html
     networks:
       - mysql_db
+      - www_app-network
     ports:
       - "8092:80"
 
 networks:
   mysql_db:
+    driver: bridge
+  www_app-network:
     driver: bridge

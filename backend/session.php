@@ -73,7 +73,7 @@ function destroy_session() {
  */
 function require_login() {
     if (!check_session()) {
-        header('Location: /pages/login.php');
+        header('Location: /index.php');
         exit();
     }
 }
@@ -83,7 +83,7 @@ function require_login() {
  */
 function require_logout() {
     if (check_session()) {
-        header('Location: /pages/dashboard.php');
+        header('Location: /index.php');
         exit();
     }
 }
