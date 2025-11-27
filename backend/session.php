@@ -73,19 +73,18 @@ function destroy_session() {
  */
 function require_login() {
     if (!check_session()) {
-        header('Location: /index.php');
+        header('Location: /');
         exit();
     }
 }
 
 /**
- * Redirect jika sudah login
+ * Check jika sudah login (tidak ada redirect)
  */
 function require_logout() {
-    if (check_session()) {
-        header('Location: /index.php');
-        exit();
-    }
+    // Fungsi ini hanya cek, tidak redirect
+    // Redirect logic ada di index.php
+    return !check_session();
 }
 
 // Cek session pada setiap load halaman

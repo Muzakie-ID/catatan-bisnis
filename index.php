@@ -1,15 +1,16 @@
 <?php
 /**
  * index.php
- * Redirect ke login atau dashboard
+ * Router utama
  */
 require_once 'backend/config.php';
 require_once 'backend/session.php';
 
 if (check_session()) {
-    header('Location: /pages/dashboard.php');
+    // Sudah login, buka dashboard
+    require_once 'pages/dashboard.php';
 } else {
-    header('Location: /pages/login.php');
+    // Belum login, buka login page
+    require_once 'pages/login.php';
 }
-exit();
 ?>
