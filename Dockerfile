@@ -42,14 +42,6 @@ RUN cat > /etc/apache2/sites-available/000-default.conf <<'EOF'
         Require all granted
     </Directory>
     
-    # Rewrite rules
-    <IfModule mod_rewrite.c>
-        RewriteEngine On
-        RewriteCond %{REQUEST_FILENAME} !-f
-        RewriteCond %{REQUEST_FILENAME} !-d
-        RewriteRule ^ index.php [QSA,L]
-    </IfModule>
-    
     # Error and Access logs
     ErrorLog ${APACHE_LOG_DIR}/error.log
     CustomLog ${APACHE_LOG_DIR}/access.log combined
