@@ -6,11 +6,7 @@
 require_once __DIR__ . '/../backend/config.php';
 require_once __DIR__ . '/../backend/session.php';
 
-// Jika sudah login, redirect ke dashboard
-if (check_session()) {
-    header('Location: /pages/dashboard.php');
-    exit();
-}
+// Tidak perlu check session di sini, langsung tampilkan form
 ?>
 <!DOCTYPE html>
 <html lang="id">
